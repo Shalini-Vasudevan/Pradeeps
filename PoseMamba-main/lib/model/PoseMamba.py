@@ -16,7 +16,7 @@ import time
 from math import sqrt
 import os
 import sys
-# 获取当前工作目录
+
 current_directory = os.path.dirname(__file__) + '/../' + '../'
 sys.path.append(current_directory)
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
