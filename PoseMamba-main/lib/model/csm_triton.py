@@ -2,6 +2,10 @@
 # cached_property = lambda func: property(lru_cache()(func))
 
 # triton cross scan, 2x speed than pytorch implementation =========================
+import sys
+sys.path.append("C:/Users/SHALINI V/OneDrive/Desktop/posemamba/PoseMamba-main/lib")
+from csm_triton import CrossScanTriton
+
 import torch
 import triton
 import triton.language as tl
