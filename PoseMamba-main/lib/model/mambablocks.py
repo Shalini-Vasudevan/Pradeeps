@@ -36,8 +36,10 @@ except ImportError:
         SelectiveScanMamba, SelectiveScanCore, SelectiveScanOflex,
         flops_selective_scan_fn, flops_selective_scan_ref, selective_scan_flop_jit
     )
-    from .csm_triton import CrossScanTritonF, CrossMergeTritonF, CrossScanTriton1b1F, getCSM
-
+    import triton
+    from .csm_triton import CrossScanTriton, CrossMergeTriton, CrossScanTriton1b1, getCSM
+except ModuleNotFoundError:
+    print("Triton not found. Using CPU/GPU-only mode.")
 
 # ===== Helper Classes =====
 class Linear2d(nn.Linear):
