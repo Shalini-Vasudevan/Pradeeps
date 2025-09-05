@@ -40,6 +40,10 @@ except ImportError:
     from .csm_triton import CrossScanTriton, CrossMergeTriton, CrossScanTriton1b1, getCSM
 except ModuleNotFoundError:
     print("Triton not found. Using CPU/GPU-only mode.")
+    CrossScanTriton = None
+    CrossMergeTriton = None
+    CrossScanTriton1b1 = None
+    getCSM = None
 
 # ===== Helper Classes =====
 class Linear2d(nn.Linear):
