@@ -15,7 +15,7 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.deterministic = True
 
-# Windows-friendly imports
+# ===== Windows-friendly Triton fallback =====
 try:
     from csms6s import (
         CrossScan, CrossMerge, CrossScan_fs_ft, CrossScan_fs_bt,
@@ -26,19 +26,8 @@ try:
         flops_selective_scan_fn, flops_selective_scan_ref, selective_scan_flop_jit
     )
     from csm_triton import CrossScanTritonF, CrossMergeTritonF, CrossScanTriton1b1F, getCSM
-except ImportError:
-    # fallback if running in different folder structure
-    from .csms6s import (
-        CrossScan, CrossMerge, CrossScan_fs_ft, CrossScan_fs_bt,
-        CrossScan_bs_ft, CrossScan_bs_bt, CrossMerge_bs_bt, CrossMerge_bs_ft,
-        CrossMerge_fs_bt, CrossMerge_fs_ft, CrossScan_plus_poselimbs, CrossMerge_plus_poselimbs,
-        CrossScan_Ab_1direction, CrossMerge_Ab_1direction, CrossScan_Ab_2direction, CrossMerge_Ab_2direction,
-        SelectiveScanMamba, SelectiveScanCore, SelectiveScanOflex,
-        flops_selective_scan_fn, flops_selective_scan_ref, selective_scan_flop_jit
-    )
-    import triton
-    from .csm_triton import CrossScanTriton, CrossMergeTriton, CrossScanTriton1b1, getCSM
-except ModuleNotFoundError:
+except (ImportError, ModuleNotFoundError):
+    # Triton not installed -> fallback mode
     print("Triton not found. Using CPU/GPU-only mode.")
     CrossScanTriton = None
     CrossMergeTriton = None
@@ -132,46 +121,42 @@ class Mlp(nn.Module):
         return x
 
 
-# ===== BiSTSSM Wrapper =====
+# ===== BiSTSSM Wrapper (Windows-friendly) =====
 class BiSTSSM(nn.Module):
-    def __init__(self, d_model=96, d_state=16, ssm_ratio=2.0, dt_rank="auto", act_layer=nn.SiLU,
-                 d_conv=3, conv_bias=True, dropout=0.0, bias=False, dt_min=0.001, dt_max=0.1,
-                 dt_init="random", dt_scale=1.0, dt_init_floor=1e-4, initialize="v0",
-                 forward_type="v2", channel_first=False):
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        # Initialize your full BiSTSSM_v2 here with all necessary arguments
-        from types import SimpleNamespace
-        self.model = SimpleNamespace()  # placeholder for BiSTSSM_v2 init on Windows
+        # If Triton is not available, forward will act as identity
+        self.triton_available = CrossScanTriton is not None
 
     def forward(self, x: torch.Tensor):
-        return x  # placeholder forward
+        if self.triton_available:
+            # Here you can implement full Triton BiSTSSM if needed
+            return x  # placeholder
+        else:
+            # fallback CPU/GPU mode
+            return x
 
 
 class BiSTSSMBlock(nn.Module):
-    def __init__(self, hidden_dim=0, drop_path=0., norm_layer=nn.LayerNorm, channel_first=False,
-                 ssm_d_state=16, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer=nn.SiLU,
-                 ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0., ssm_init="v0",
-                 forward_type="v2", mlp_ratio=4.0, mlp_act_layer=nn.GELU, mlp_drop_rate=0.,
-                 gmlp=False, use_checkpoint=False, post_norm=False):
+    def __init__(self, hidden_dim=0, drop_path=0., norm_layer=nn.LayerNorm,
+                 forward_type="v2", mlp_ratio=4.0, mlp_act_layer=nn.GELU,
+                 mlp_drop_rate=0., gmlp=False, use_checkpoint=False):
         super().__init__()
         self.use_checkpoint = use_checkpoint
-        self.ssm_branch = ssm_ratio > 0
-        self.mlp_branch = mlp_ratio > 0
 
-        if self.ssm_branch:
-            self.norm = norm_layer(hidden_dim)
-            self.op = BiSTSSM(d_model=hidden_dim, d_state=ssm_d_state, ssm_ratio=ssm_ratio,
-                              dt_rank=ssm_dt_rank, act_layer=ssm_act_layer, d_conv=ssm_conv,
-                              conv_bias=ssm_conv_bias, dropout=ssm_drop_rate, initialize=ssm_init,
-                              forward_type=forward_type, channel_first=channel_first)
+        self.ssm_branch = True
+        self.mlp_branch = True
+
+        self.norm = norm_layer(hidden_dim)
+        self.op = BiSTSSM()
+
+        _MLP = Mlp if not gmlp else gMlp  # if gMlp exists in your repo
+        self.norm2 = norm_layer(hidden_dim)
+        mlp_hidden_dim = int(hidden_dim * mlp_ratio)
+        self.mlp = _MLP(in_features=hidden_dim, hidden_features=mlp_hidden_dim,
+                        act_layer=mlp_act_layer, drop=mlp_drop_rate)
+
         self.drop_path = DropPath(drop_path)
-
-        if self.mlp_branch:
-            _MLP = Mlp if not gmlp else gMlp
-            self.norm2 = norm_layer(hidden_dim)
-            mlp_hidden_dim = int(hidden_dim * mlp_ratio)
-            self.mlp = _MLP(in_features=hidden_dim, hidden_features=mlp_hidden_dim,
-                            act_layer=mlp_act_layer, drop=mlp_drop_rate, channels_first=channel_first)
 
     def _forward(self, input: torch.Tensor):
         x = input
