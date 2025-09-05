@@ -19,17 +19,19 @@ DropPath.__repr__ = lambda self: f"timm.DropPath({self.drop_prob})"
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.deterministic = True
-from csms6s import (
-    CrossScan, CrossMerge, CrossScan_fs_ft, CrossScan_fs_bt,
-    CrossScan_bs_ft, CrossScan_bs_bt, CrossMerge_bs_bt, CrossMerge_bs_ft,
-    CrossMerge_fs_bt, CrossMerge_fs_ft, CrossScan_plus_poselimbs, CrossMerge_plus_poselimbs,
-    CrossScan_Ab_1direction, CrossMerge_Ab_1direction, CrossScan_Ab_2direction, CrossMerge_Ab_2direction,
-    SelectiveScanMamba, SelectiveScanCore, SelectiveScanOflex,
-    flops_selective_scan_fn, flops_selective_scan_ref, selective_scan_flop_jit
-)
+
 
 try:
-    from .csm_triton import CrossScanTriton, CrossMergeTriton, CrossScanTriton1b1, getCSM
+
+    from .csms6s import (
+        CrossScan, CrossMerge, CrossScan_fs_ft, CrossScan_fs_bt,
+        CrossScan_bs_ft, CrossScan_bs_bt, CrossMerge_bs_bt, CrossMerge_bs_ft,
+        CrossMerge_fs_bt, CrossMerge_fs_ft, CrossScan_plus_poselimbs, CrossMerge_plus_poselimbs,
+        CrossScan_Ab_1direction, CrossMerge_Ab_1direction, CrossScan_Ab_2direction, CrossMerge_Ab_2direction,
+        SelectiveScanMamba, SelectiveScanCore, SelectiveScanOflex,
+        flops_selective_scan_fn, flops_selective_scan_ref, selective_scan_flop_jit
+    )
+
     from .csm_triton import CrossScanTritonF, CrossMergeTritonF, CrossScanTriton1b1F
     from .csms6s import CrossScan, CrossMerge, CrossScan_fs_ft, CrossScan_fs_bt, CrossScan_bs_ft, CrossScan_bs_bt, CrossMerge_bs_bt, CrossMerge_bs_ft, CrossMerge_fs_bt, CrossMerge_fs_ft, CrossScan_plus_poselimbs, CrossMerge_plus_poselimbs
     from .csms6s import CrossScan_Ab_1direction, CrossMerge_Ab_1direction, CrossScan_Ab_2direction, CrossMerge_Ab_2direction
