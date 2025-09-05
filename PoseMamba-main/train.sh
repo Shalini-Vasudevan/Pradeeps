@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python train.py --config configs/pose3d/PoseMamba_train_h36m_S.yaml --checkpoint checkpoint/pose3d/PoseMamba_train_h36m_S 
